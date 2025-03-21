@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Model AI Chatbot</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
+        textarea { width: 80%; height: 100px; }
+        button { padding: 10px 20px; margin-top: 10px; }
+        #response, #chatHistory { margin-top: 20px; font-weight: bold; text-align: left; width: 80%; margin: 20px auto; }
+        #chatHistory { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto; }
+        #controls { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Chat with AI</h1>
+    
+    <!-- Model Selection -->
+    <label for="modelSelect">Choose AI Model:</label>
+    <select id="modelSelect">
+        <option value="LLaMA-3-8B">LLaMA-3-8B</option>
+        <option value="LLaMA-3-70B">LLaMA-3-70B</option>
+        <option value="LLaMA-2-7B">LLaMA-2-7B</option>
+        <option value="LLaMA-2-13B">LLaMA-2-13B</option>
+        <option value="LLaMA-2-70B">LLaMA-2-70B</option>
+        <option value="Mistral-7B">Mistral-7B</option>
+        <option value="Mistral-7B-Instruct">Mistral-7B-Instruct</option>
+        <option value="Mixtral-8x7B">Mixtral-8x7B</option>
+        <option value="Falcon-7B">Falcon-7B</option>
+        <option value="Falcon-40B">Falcon-40B</option>
+        <option value="RedPajama-INCITE-7B">RedPajama-INCITE-7B</option>
+        <option value="MPT-7B">MPT-7B</option>
+    </select>
+    
+    <br><br>
+    
+    <!-- Chat Input -->
+    <textarea id="userInput" placeholder="Type your message..."></textarea><br>
+    <div id="controls">
+        <button onclick="sendMessage()">Send</button>
+        <button onclick="clearChat()">Clear Chat History</button>
+        <label for="maxTokens">Max Response Length:</label>
+        <input type="range" id="maxTokens" min="50" max="500" value="200" step="10" oninput="updateTokenLabel()">
+        <span id="tokenLabel">200</span>
+    </div>
+    
+    <!-- Chat History -->
+    <div id="chatHistory"></div>
+    
+    <!-- Chat Response -->
+    <div id="response"></div>
+
+    <script>
+        let chatHistory = [];
+
+        async function sendMessage() {
+            let message = document.getElementById("userInput").value.trim();
+            let model = document.getElementById("modelSelect").value;
+            let maxTokens = document.getElementById("maxTokens").value;
+            let responseDiv = document.getElementById("response");
+            let chatHistoryDiv = document.getElementById("chatHistory");
+
+            if (!message) {
+                responseDiv.innerHTML = "⚠️ Please enter a valid message.";
+                return;
+            }
+
+            responseDiv.innerHTML = "Thinking...";
+            try {
+                let res = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ model: model, message: message, max_tokens: maxTokens })
+                });
+
+                if (!res.ok) {
+                    throw new Error("Failed to fetch response from the server.");
+                }
+
+                let data = await res.json();
+                let aiResponse = data.response;
+
+                // Update chat history
+                chatHistory.push({ user: message, ai: aiResponse });
+                updateChatHistory();
+
+                responseDiv.innerHTML = "";
+            } catch (error) {
+                responseDiv.innerHTML = "❌ Error: " + error.message;
+            }
+        }
+
+        function updateChatHistory() {
+            let chatHistoryDiv = document.getElementById("chatHistory");
+            chatHistoryDiv.innerHTML = chatHistory.map(entry => 
+                `<p><strong>User:</strong> ${entry.user}<br><strong>AI:</strong> ${entry.ai}</p>`
+            ).join("");
+        }
+
+        function clearChat() {
+            chatHistory = [];
+            document.getElementById("chatHistory").innerHTML = "";
+            document.getElementById("response").innerHTML = "Chat history cleared.";
+        }
+
+        function updateTokenLabel() {
+            let maxTokens = document.getElementById("maxTokens").value;
+            document.getElementById("tokenLabel").innerText = maxTokens;
+        }
+    </script>
+</body>
+</html>
